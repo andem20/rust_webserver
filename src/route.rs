@@ -1,6 +1,6 @@
-use crate::{response::Response, IndexDTO};
+use crate::{response::Response, request::Request};
 
-type Handler = fn() -> Box<dyn Response>;
+type Handler = fn(req: Request) -> Box<dyn Response>;
 
 pub struct Route {
     endpoint: String,
@@ -8,7 +8,7 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn get<T: Response>(endpoint: &str, handler: Handler) -> Route {
+    pub fn get(endpoint: &str, handler: Handler) -> Route {
         Route {
             endpoint: endpoint.to_string(),
             handler,

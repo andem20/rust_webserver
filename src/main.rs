@@ -1,24 +1,22 @@
-use std::{time::Duration, thread};
-
+use request::Request;
 use response::Response;
 use route::Route;
 use serde::{Serialize, Deserialize};
-use serde_json::{json, Value, Error};
+use serde_json::Error;
 
 use crate::http_server::HTTPServer;
 
 mod http_server;
 mod route;
 mod response;
+mod request;
 
 fn main() {
     let mut server = HTTPServer::new("127.0.0.1", 8080);
 
     // Set up all endpoints
     server.routes(vec![
-        Route::get::<IndexDTO>("/", index_handler),
-        // Route::get("/test", test_handler),
-        // Route::get("/test/slow", slow_handler),
+        Route::get("/", index_handler),
     ]);
 
     server.listen(|this| {
@@ -46,8 +44,8 @@ impl Response for IndexDTO {
 }
 
 
-fn index_handler() -> Box<dyn Response> {
-    println!("Index!");
+fn index_handler(req: Request) -> Box<dyn Response> {
+    println!("Index!\n{:?}", req.get_headers());
 
     Box::new(IndexDTO {
         name: "John Doe".to_owned(),
@@ -56,21 +54,5 @@ fn index_handler() -> Box<dyn Response> {
             "+44 1234567".to_owned(),
             "+44 2345678".to_owned()
         ].to_vec()
-    })
-}
-
-fn test_handler() -> Value {
-    println!("Test!");
-    json!({
-        "test": "TEST"
-    })
-}
-
-fn slow_handler() -> Value {
-    thread::sleep(Duration::from_secs(5));
-    println!("Slow!");
-
-    json!({
-        "sow": "SLOW"
     })
 }

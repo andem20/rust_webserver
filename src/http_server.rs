@@ -1,8 +1,8 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, fs, time::Duration, collections::HashMap};
+use std::{net::{TcpListener}, io::{Read, Write}, collections::HashMap};
 
 use serde_json::json;
 
-use crate::{route::Route, response::Response};
+use crate::{route::Route, request::Request};
 
 pub struct HTTPServer {
     host: String,
@@ -37,22 +37,25 @@ impl HTTPServer {
             stream.read(&mut buffer).unwrap();
         
             let headers = String::from_utf8_lossy(&buffer);
+
+            let request = Request::new(&buffer);
             
-            println!("Request: {}", &headers);
-        
-            let views_dir = "public/views/";
+            // let views_dir = "public/views/";
 
             let endpoint = headers.split(" ").nth(1).unwrap();
 
             let route = self.routes.get(endpoint);
             
             let (status, content) = if route.is_none() {
-                println!("404");
-                (404, serde_json::to_string_pretty(&json!({
+                let value = serde_json::to_string_pretty(&json!({
                     "error": "Page not found"
-                })).unwrap())
+                })).unwrap();
+
+                (404, value)
             } else {
-                let value = (route.unwrap().get_handler())().get_value().unwrap();
+                let handler = route.unwrap().get_handler();
+                let value = handler(request).get_value().unwrap();
+                
                 (200, value)
             };
         
@@ -69,10 +72,6 @@ impl HTTPServer {
             stream.write(response.as_bytes()).unwrap();
             stream.flush().unwrap();
         }
-    }
-
-    pub fn get_listener(&self) -> Option<&TcpListener> {
-        self.listener.as_ref()
     }
 
     pub fn get_host(&self) -> &str {
