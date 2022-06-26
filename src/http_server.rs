@@ -1,10 +1,14 @@
-use std::{collections::HashMap, net::{TcpListener, TcpStream}, io::Read};
+use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, fs, time::Duration, collections::HashMap};
+
+use serde_json::json;
+
+use crate::{route::Route, response::Response};
 
 pub struct HTTPServer {
     host: String,
     port: u16,
     listener: Option<TcpListener>,
-    endpoints: HashMap<String, fn()>,
+    routes: HashMap<String, Route>,
 }
 
 impl HTTPServer {
@@ -13,7 +17,7 @@ impl HTTPServer {
             host: host.to_string(),
             port,
             listener: None,
-            endpoints: HashMap::new()
+            routes: HashMap::new()
         }
     }
     
@@ -26,10 +30,44 @@ impl HTTPServer {
         callback(self);
 
         for stream in listener.incoming() {
-            let stream = stream.unwrap();
+            let mut stream = stream.unwrap();
     
-            on_connection(stream);
-            // on_request();
+            let mut buffer = [0; 1024];
+    
+            stream.read(&mut buffer).unwrap();
+        
+            let headers = String::from_utf8_lossy(&buffer);
+            
+            println!("Request: {}", &headers);
+        
+            let views_dir = "public/views/";
+
+            let endpoint = headers.split(" ").nth(1).unwrap();
+
+            let route = self.routes.get(endpoint);
+            
+            let (status, content) = if route.is_none() {
+                println!("404");
+                (404, serde_json::to_string_pretty(&json!({
+                    "error": "Page not found"
+                })).unwrap())
+            } else {
+                let value = (route.unwrap().get_handler())().get_value().unwrap();
+                (200, value)
+            };
+        
+            // let contents_path = format!("{}/{}", &views_dir, file);
+            // let contents = fs::read_to_string(contents_path).unwrap();
+        
+            let response = format!(
+                "HTTP/1.1 {}\r\nContent-Length: {}\r\n\r\n{}\r\nContent-Type: application/json",
+                status,
+                &content.len(),
+                &content
+            );
+        
+            stream.write(response.as_bytes()).unwrap();
+            stream.flush().unwrap();
         }
     }
 
@@ -44,14 +82,11 @@ impl HTTPServer {
     pub fn get_port(&self) -> u16 {
         self.port
     }
+
+    pub fn routes(&mut self, routes: Vec<Route>) {
+        for route in routes {
+            self.routes.insert(route.get_endpoint().clone(), route);
+        }
+    }
 }
 
-fn on_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024];
-
-    stream.read(&mut buffer).unwrap();
-
-    let headers = String::from_utf8_lossy(&buffer);
-
-    println!("Request: {}", &headers);
-}

@@ -1,17 +1,25 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, fs, time::Duration};
+use std::{time::Duration, thread};
+
+use response::Response;
+use route::Route;
+use serde::{Serialize, Deserialize};
+use serde_json::{json, Value, Error};
 
 use crate::http_server::HTTPServer;
 
 mod http_server;
-
-const HOST: &str = "127.0.0.1";
-const PORT: &str = "8000";
+mod route;
+mod response;
 
 fn main() {
-
-    let mut server = HTTPServer::new("127.0.0.1", 8000);
+    let mut server = HTTPServer::new("127.0.0.1", 8080);
 
     // Set up all endpoints
+    server.routes(vec![
+        Route::get::<IndexDTO>("/", index_handler),
+        // Route::get("/test", test_handler),
+        // Route::get("/test/slow", slow_handler),
+    ]);
 
     server.listen(|this| {
         println!("Now listening on http://{}:{}", 
@@ -19,54 +27,50 @@ fn main() {
             this.get_port()
         );
     });
-
-    // let listener = TcpListener::bind(format!("{}:{}", &HOST, &PORT)).unwrap();
-
-    // println!("Now listening on http://{}:{}\n\n", &HOST, &PORT);
-
-    // for stream in listener.incoming() {
-    //     let stream = stream.unwrap();
-
-    //     on_connection(stream);
-    // }
-}
-
-fn on_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024];
-
-    stream.read(&mut buffer).unwrap();
-
-    let headers = String::from_utf8_lossy(&buffer);
-
-    println!("Request: {}", &headers);
-
-    get("/", "index.html", &headers, &mut stream);
-
 }
 
 
-fn get(endpoint: &str, filename: &str, headers: &str, stream: &mut TcpStream) {
-    let views_dir = "public/views/";
-    
-    let (status, file) = match headers.split(" ").nth(1) {
-        Some("/") => ("200 OK", "index.html"),
-        Some("/slow") => {
-            std::thread::sleep(Duration::from_millis(5000));
-            ("200 OK", "slow.html")
-        },
-        _ => ("404 NOT FOUND", "404.html")
-    };
 
-    let contents_path = format!("{}/{}", &views_dir, file);
-    let contents = fs::read_to_string(contents_path).unwrap();
+#[derive(Serialize, Deserialize,)]
+struct IndexDTO {
+    name: String,
+    age: u8,
+    phones: Vec<String>
+}
 
-    let response = format!(
-        "HTTP/1.1 {}\r\nContent-Length: {}\r\n\r\n{}",
-        status,
-        contents.len(),
-        contents
-    );
 
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+impl Response for IndexDTO {
+    fn get_value(&self) -> Result<String, Error> {
+        serde_json::to_string_pretty(self)
+    }
+}
+
+
+fn index_handler() -> Box<dyn Response> {
+    println!("Index!");
+
+    Box::new(IndexDTO {
+        name: "John Doe".to_owned(),
+        age: 43,
+        phones: [
+            "+44 1234567".to_owned(),
+            "+44 2345678".to_owned()
+        ].to_vec()
+    })
+}
+
+fn test_handler() -> Value {
+    println!("Test!");
+    json!({
+        "test": "TEST"
+    })
+}
+
+fn slow_handler() -> Value {
+    thread::sleep(Duration::from_secs(5));
+    println!("Slow!");
+
+    json!({
+        "sow": "SLOW"
+    })
 }
