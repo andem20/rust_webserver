@@ -2,7 +2,6 @@ use request::Request;
 use response::Response;
 use route::Route;
 use serde::{Serialize, Deserialize};
-use serde_json::Error;
 
 use crate::http_server::HTTPServer;
 
@@ -27,8 +26,6 @@ fn main() {
     });
 }
 
-
-
 #[derive(Serialize, Deserialize,)]
 struct IndexDTO {
     name: String,
@@ -36,23 +33,17 @@ struct IndexDTO {
     phones: Vec<String>
 }
 
-
-impl Response for IndexDTO {
-    fn get_value(&self) -> Result<String, Error> {
-        serde_json::to_string_pretty(self)
-    }
-}
-
-
-fn index_handler(req: Request) -> Box<dyn Response> {
+fn index_handler(req: &Request, res: &mut Response) {
     println!("Index!\n{:?}", req.get_headers());
 
-    Box::new(IndexDTO {
+    let data = IndexDTO {
         name: "John Doe".to_owned(),
         age: 43,
         phones: [
             "+44 1234567".to_owned(),
             "+44 2345678".to_owned()
         ].to_vec()
-    })
+    };
+
+    res.json(data);
 }

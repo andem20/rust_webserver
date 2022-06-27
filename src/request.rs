@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-type Headers = HashMap<String, String>;
+use crate::http_server::Headers;
+
 pub struct Request {
     headers: Headers,
 }

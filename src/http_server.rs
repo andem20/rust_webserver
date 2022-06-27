@@ -2,7 +2,9 @@ use std::{net::{TcpListener}, io::{Read, Write}, collections::HashMap};
 
 use serde_json::json;
 
-use crate::{route::Route, request::Request};
+use crate::{route::Route, request::Request, response::Response};
+
+pub type Headers = HashMap<String, String>;
 
 pub struct HTTPServer {
     host: String,
@@ -39,6 +41,7 @@ impl HTTPServer {
             let headers = String::from_utf8_lossy(&buffer);
 
             let request = Request::new(&buffer);
+            let mut response = Response::new(HashMap::new());
             
             // let views_dir = "public/views/";
 
@@ -54,9 +57,9 @@ impl HTTPServer {
                 (404, value)
             } else {
                 let handler = route.unwrap().get_handler();
-                let value = handler(request).get_value().unwrap();
-                
-                (200, value)
+                handler(&request, response.as_mut());
+
+                (200, response.get_content())
             };
         
             // let contents_path = format!("{}/{}", &views_dir, file);

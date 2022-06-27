@@ -1,6 +1,6 @@
 use crate::{response::Response, request::Request};
 
-type Handler = fn(req: Request) -> Box<dyn Response>;
+type Handler = fn(req: &Request, res: &mut Response);
 
 pub struct Route {
     endpoint: String,
