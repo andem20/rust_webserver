@@ -43,8 +43,6 @@ impl HTTPServer {
             let request = Request::new(&buffer);
             let mut response = Response::new(HashMap::new());
             
-            // let views_dir = "public/views/";
-
             let endpoint = headers.split(" ").nth(1).unwrap();
 
             let route = self.routes.get(endpoint);
@@ -61,9 +59,6 @@ impl HTTPServer {
 
                 (200, response.get_content())
             };
-        
-            // let contents_path = format!("{}/{}", &views_dir, file);
-            // let contents = fs::read_to_string(contents_path).unwrap();
         
             let response = format!(
                 "HTTP/1.1 {}\r\nContent-Length: {}\r\n\r\n{}\r\nContent-Type: application/json",
