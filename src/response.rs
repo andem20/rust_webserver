@@ -30,7 +30,3 @@ impl Response {
         self
     }
 }
-
-// pub trait Response {
-//     fn get_value(&self) -> Result<String, Error>;
-// }
