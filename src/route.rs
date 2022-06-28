@@ -2,6 +2,7 @@ use crate::{response::Response, request::Request};
 
 type Handler = fn(req: &Request, res: &mut Response);
 
+#[derive(Clone)]
 pub struct Route {
     endpoint: String,
     handler: Handler

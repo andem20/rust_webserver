@@ -1,3 +1,6 @@
+
+use std::{thread, time::Duration};
+
 use request::Request;
 use response::Response;
 use route::Route;
@@ -9,6 +12,7 @@ mod http_server;
 mod route;
 mod response;
 mod request;
+mod tests;
 
 fn main() {
     let mut server = HTTPServer::new("127.0.0.1", 8080);
@@ -16,6 +20,7 @@ fn main() {
     // Set up all endpoints
     server.routes(vec![
         Route::get("/", index_handler),
+        Route::get("/slow", slow_handler),
     ]);
 
     server.listen(|this| {
@@ -35,6 +40,23 @@ struct IndexDTO {
 
 fn index_handler(req: &Request, res: &mut Response) {
     println!("Index!\n{:?}", req.get_headers());
+
+    let data = IndexDTO {
+        name: "John Doe".to_owned(),
+        age: 43,
+        phones: [
+            "+44 1234567".to_owned(),
+            "+44 2345678".to_owned()
+        ].to_vec()
+    };
+
+    res.json(data);
+}
+
+fn slow_handler(req: &Request, res: &mut Response) {
+    println!("Index!\n{:?}", req.get_headers());
+    
+    thread::sleep(Duration::from_secs(5));
 
     let data = IndexDTO {
         name: "John Doe".to_owned(),
