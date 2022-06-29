@@ -11,7 +11,8 @@ pub struct HTTPServer {
     host: String,
     port: u16,
     routes: HashMap<String, Route>,
-    terminate: Arc<Mutex<bool>>
+    terminate: Arc<Mutex<bool>>,
+    receiver: Option<Receiver<bool>>
 }
 
 impl HTTPServer {
@@ -20,11 +21,12 @@ impl HTTPServer {
             host: host.to_string(),
             port,
             routes: HashMap::new(),
-            terminate: Arc::new(Mutex::new(false))
+            terminate: Arc::new(Mutex::new(false)),
+            receiver: None
         }
     }
     
-    pub fn listen(&self, callback: fn(this: &HTTPServer)) {
+    pub fn listen(&mut self, callback: fn(this: &HTTPServer)) {
         let addr = format!("{}:{}", self.host, self.port);
         callback(&self);
 
@@ -35,6 +37,10 @@ impl HTTPServer {
         let listener = TcpListener::bind(addr).unwrap();
 
         let terminate = self.terminate.clone();
+
+        let (sender, receiver) = mpsc::channel();
+
+        self.receiver = Some(receiver);
         
         thread::spawn(move || {
             for stream in listener.incoming() {
@@ -47,6 +53,12 @@ impl HTTPServer {
                 pool.execute(|| {
                     handle_connection(stream, routes); 
                 });
+
+                let active_threads = pool.get_num_active_threads();
+
+                if active_threads == 0 && *terminate.lock().unwrap() {
+                    let _ = sender.send(true);
+                }
             }
         });
     }
@@ -67,6 +79,7 @@ impl HTTPServer {
 
     pub fn close(&mut self) {
         *self.terminate.lock().unwrap() = true;
+        self.receiver.as_ref().unwrap().recv();
     }
     
 }

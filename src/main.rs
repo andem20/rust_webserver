@@ -31,12 +31,8 @@ fn main() {
         );
     });
 
-    loop {
-        thread::sleep(Duration::from_secs(2));
-        server.close();
-        thread::sleep(Duration::from_secs(2));
-        break;
-    }
+    thread::sleep(Duration::from_secs(10));
+    server.close();
 }
 
 #[derive(Serialize, Deserialize,)]

@@ -32,6 +32,18 @@ impl ThreadPool {
 
         self.sender.send(Message::NewJob(job)).unwrap();
     }
+    
+    pub fn get_num_active_threads(&self) -> u16 {
+        let workers = &self.workers;
+
+        let mut active_threads: u16 = 0;
+
+        for worker in workers {
+            if worker.is_finished() { active_threads += 1; }
+        }
+
+        active_threads
+    }
 }
 
 impl Drop for ThreadPool {
@@ -49,6 +61,7 @@ impl Drop for ThreadPool {
 
             if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();
+                worker.is_finished = true;
             }
         }
     }
@@ -57,6 +70,7 @@ impl Drop for ThreadPool {
 struct Worker {
     id: u16,
     thread: Option<thread::JoinHandle<()>>,
+    is_finished: bool
 }
 
 impl Worker {
@@ -81,7 +95,12 @@ impl Worker {
         Worker {
             id,
             thread: Some(thread),
+            is_finished: false
         }
+    }
+
+    fn is_finished(&self) -> bool {
+        self.is_finished
     }
 }
 
