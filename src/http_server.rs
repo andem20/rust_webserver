@@ -2,7 +2,7 @@ use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, collections::HashMap
 
 use serde_json::json;
 
-use crate::{route::Route, request::Request, response::Response};
+use crate::{route::Route, request::Request, response::Response, threadpool::ThreadPool};
 
 pub type Headers = HashMap<String, String>;
 
@@ -25,24 +25,25 @@ impl HTTPServer {
     }
     
     pub fn listen(&mut self, callback: fn(this: &HTTPServer)) {
-        let listener = TcpListener::bind(format!("{}:{}", self.host, self.port)).unwrap();
+        let listener = TcpListener::bind(
+            format!("{}:{}", self.host, self.port)
+        ).unwrap();
+
         self.listener = Some(listener);
         
         let listener = self.listener.as_ref().unwrap();
 
         callback(self);
+
+        let pool = ThreadPool::new(4);
         
         for stream in listener.incoming() {
+            let stream = stream.unwrap();
             let routes = self.routes.clone();
             
-            match stream {
-                Ok(s) => {
-                    thread::spawn(|| {
-                        handle_connection(s, routes); 
-                    });
-                }
-                Err(e) => panic!("encountered IO error: {}", e),
-            }
+            pool.execute(|| {
+                handle_connection(stream, routes); 
+            });
         }
     }
 

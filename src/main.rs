@@ -13,6 +13,7 @@ mod route;
 mod response;
 mod request;
 mod tests;
+mod threadpool;
 
 fn main() {
     let mut server = HTTPServer::new("127.0.0.1", 8080);
