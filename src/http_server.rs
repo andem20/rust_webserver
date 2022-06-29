@@ -1,4 +1,4 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, collections::HashMap, sync::{Arc, Mutex, MutexGuard}, thread, time::Duration};
+use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, collections::HashMap, thread, time::Duration, sync::{mpsc::{Receiver, self, Sender}, Arc, Mutex}};
 
 use serde_json::json;
 
@@ -10,8 +10,8 @@ pub type Headers = HashMap<String, String>;
 pub struct HTTPServer {
     host: String,
     port: u16,
-    listener: Option<TcpListener>,
     routes: HashMap<String, Route>,
+    terminate: Arc<Mutex<bool>>
 }
 
 impl HTTPServer {
@@ -19,32 +19,36 @@ impl HTTPServer {
         HTTPServer {
             host: host.to_string(),
             port,
-            listener: None,
             routes: HashMap::new(),
+            terminate: Arc::new(Mutex::new(false))
         }
     }
     
-    pub fn listen(&mut self, callback: fn(this: &HTTPServer)) {
-        let listener = TcpListener::bind(
-            format!("{}:{}", self.host, self.port)
-        ).unwrap();
+    pub fn listen(&self, callback: fn(this: &HTTPServer)) {
+        let addr = format!("{}:{}", self.host, self.port);
+        callback(&self);
 
-        self.listener = Some(listener);
+        let routes = Arc::new(self.routes.clone());
+
+        let pool = ThreadPool::new(4); // should be 2x num of cpu cores
+
+        let listener = TcpListener::bind(addr).unwrap();
+
+        let terminate = self.terminate.clone();
         
-        let listener = self.listener.as_ref().unwrap();
+        thread::spawn(move || {
+            for stream in listener.incoming() {
 
-        callback(self);
+                if *terminate.lock().unwrap() { break }
 
-        let pool = ThreadPool::new(4);
-        
-        for stream in listener.incoming() {
-            let stream = stream.unwrap();
-            let routes = self.routes.clone();
-            
-            pool.execute(|| {
-                handle_connection(stream, routes); 
-            });
-        }
+                let stream = stream.unwrap();
+                let routes = routes.clone();
+                
+                pool.execute(|| {
+                    handle_connection(stream, routes); 
+                });
+            }
+        });
     }
 
     pub fn get_host(&self) -> &str {
@@ -60,10 +64,14 @@ impl HTTPServer {
             self.routes.insert(route.get_endpoint().clone(), route);
         }
     }
+
+    pub fn close(&mut self) {
+        *self.terminate.lock().unwrap() = true;
+    }
     
 }
 
-fn handle_connection(mut stream: TcpStream, routes: HashMap<String, Route>) {
+fn handle_connection(mut stream: TcpStream, routes: Arc<HashMap<String, Route>>) {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();

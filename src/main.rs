@@ -1,5 +1,5 @@
 
-use std::{thread, time::Duration};
+use std::{thread, time::Duration, sync::mpsc};
 
 use request::Request;
 use response::Response;
@@ -16,7 +16,7 @@ mod tests;
 mod threadpool;
 
 fn main() {
-    let mut server = HTTPServer::new("127.0.0.1", 8080);
+    let mut server = HTTPServer::new("127.0.0.1", 8000);
 
     // Set up all endpoints
     server.routes(vec![
@@ -30,6 +30,13 @@ fn main() {
             this.get_port()
         );
     });
+
+    loop {
+        thread::sleep(Duration::from_secs(2));
+        server.close();
+        thread::sleep(Duration::from_secs(2));
+        break;
+    }
 }
 
 #[derive(Serialize, Deserialize,)]
