@@ -31,8 +31,9 @@ fn main() {
         );
     });
 
-    thread::sleep(Duration::from_secs(10));
-    server.close();
+    loop {
+        
+    }
 }
 
 #[derive(Serialize, Deserialize,)]
@@ -43,8 +44,6 @@ struct IndexDTO {
 }
 
 fn index_handler(req: &Request, res: &mut Response) {
-    println!("Index!\n{:?}", req.get_headers());
-
     let data = IndexDTO {
         name: "John Doe".to_owned(),
         age: 43,
@@ -53,6 +52,8 @@ fn index_handler(req: &Request, res: &mut Response) {
             "+44 2345678".to_owned()
         ].to_vec()
     };
+
+    res.set_header("Some-Custom-Header", "Some-Value");
 
     res.json(data);
 }

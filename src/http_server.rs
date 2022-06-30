@@ -2,7 +2,7 @@ use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::H
 
 use serde_json::json;
 
-use crate::{route::Route, request::Request, response::Response, threadpool::ThreadPool};
+use crate::{route::Route, request::Request, response::{Response, self}, threadpool::ThreadPool};
 
 pub type Headers = HashMap<String, String>;
 
@@ -118,16 +118,28 @@ fn handle_connection(mut stream: TcpStream, routes: Arc<HashMap<String, Route>>)
     } else {
         let handler = route.unwrap().get_handler();
         handler(&request, response.as_mut());
+        let value = response.get_content();
 
-        (200, response.get_content())
+        (200, value)
     };
 
+    let mut headers = String::new();
+    for header in response.get_headers() {
+        headers.push_str(&header.0);
+        headers.push_str(": ");
+        headers.push_str(&header.1);
+        headers.push_str("\r\n");
+    }
+
     let response = format!(
-        "HTTP/1.1 {}\r\nContent-Length: {}\r\n\r\n{}\r\nContent-Type: application/json",
+        "HTTP/1.1 {}\r\nContent-Length: {}\r\n{}\r\n{}",
         status,
         &content.len(),
+        &headers,
         &content
     );
+
+    println!("{}", &response);
 
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();

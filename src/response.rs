@@ -20,8 +20,9 @@ impl Response {
 
     pub fn json(&mut self, content: impl Serialize) {
         let json = json!(content);
-
         self.content = Some(serde_json::to_string_pretty(&json).unwrap());
+        self.headers.insert("Content-Type".to_owned(), "application/json".to_owned());
+        
     }
 
     pub fn text(&mut self, content: String) {
@@ -33,11 +34,19 @@ impl Response {
         self.content = Some(contents);
     }
 
-    pub fn get_content(self) -> String {
-        self.content.unwrap().to_owned()
+    pub fn get_content(&self) -> String {
+        self.content.as_ref().unwrap().clone()
     }
 
     pub fn as_mut(&mut self) -> &mut Response {
         self
+    }
+
+    pub fn get_headers(&self) -> &Headers {
+        &self.headers
+    }
+
+    pub fn set_header(&mut self, header: &str, value: &str) {
+        self.headers.insert(header.to_owned(), value.to_owned());
     }
 }
