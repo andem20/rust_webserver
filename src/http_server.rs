@@ -12,17 +12,19 @@ pub struct HTTPServer {
     port: u16,
     routes: HashMap<String, Route>,
     terminate: Arc<Mutex<bool>>,
-    receiver: Option<Receiver<bool>>
+    receiver: Option<Receiver<bool>>,
+    pool_size: u16,
 }
 
 impl HTTPServer {
-    pub fn new(host: &str, port: u16) -> HTTPServer {
+    pub fn new(host: &str, port: u16, pool_size: u16) -> HTTPServer {
         HTTPServer {
             host: host.to_string(),
             port,
             routes: HashMap::new(),
             terminate: Arc::new(Mutex::new(false)),
-            receiver: None
+            receiver: None,
+            pool_size
         }
     }
     
@@ -32,7 +34,7 @@ impl HTTPServer {
 
         let routes = Arc::new(self.routes.clone());
 
-        let pool = ThreadPool::new(4); // should be 2x num of cpu cores
+        let pool = ThreadPool::new(self.pool_size); // should be 2x num of cpu cores
 
         let listener = TcpListener::bind(addr).unwrap();
 
@@ -42,7 +44,7 @@ impl HTTPServer {
 
         self.receiver = Some(receiver);
 
-        listener.set_nonblocking(true);
+        listener.set_nonblocking(true).unwrap();
         
         thread::spawn(move || {
             loop {
@@ -50,7 +52,7 @@ impl HTTPServer {
                 let stream = listener.accept();
 
                 match stream {
-                    Ok((s, addr)) => {
+                    Ok((s, _addr)) => {
                         // do something with the TcpStream
                         pool.execute(|| {
                             handle_connection(s, routes); 

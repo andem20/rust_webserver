@@ -30,7 +30,7 @@ mod tests {
     }
     
     fn setup() -> HTTPServer {
-        let mut server = HTTPServer::new("127.0.0.1", 8080);
+        let mut server = HTTPServer::new("127.0.0.1", 8080, 4);
     
         // Set up all endpoints
         server.routes(vec![
