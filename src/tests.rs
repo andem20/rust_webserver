@@ -1,13 +1,11 @@
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
-
     use serde::{Serialize, Deserialize};
     
     use crate::{route::Route, http_server::HTTPServer, request::Request, response::Response};
     
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, PartialEq, Eq)]
     struct TestDTO {
         name: String,
         age: u8,
@@ -15,8 +13,6 @@ mod tests {
     }
     
     fn test_handler(req: &Request, res: &mut Response) {
-        println!("Index!\n{:?}", req.get_headers());
-    
         let data = TestDTO {
             name: "John Doe".to_owned(),
             age: 43,
@@ -48,17 +44,25 @@ mod tests {
     }
     
     #[test]
-    fn web_server_test() -> Result<(), Box<dyn Error>> {
+    fn web_server_test() {
+        let expected = TestDTO {
+            name: "John Doe".to_owned(),
+            age: 43,
+            phones: [
+                "+44 1234567".to_owned(),
+                "+44 2345678".to_owned()
+            ].to_vec()
+        };
+
         let mut server = setup();
 
-        let addr = "localhost:8000";
+        let request = reqwest::blocking::get("http://localhost:8080");
+        let body = request.unwrap().text().unwrap();
+        
+        let actual = serde_json::from_str::<TestDTO>(&body).unwrap();
+        
+        assert!(actual == expected);
 
-        let future = async {
-            reqwest::get(addr).await.unwrap();
-        };
-    
         server.close();
-
-        Ok(())
     }
 }

@@ -53,7 +53,6 @@ impl HTTPServer {
 
                 match stream {
                     Ok((s, _addr)) => {
-                        // do something with the TcpStream
                         pool.execute(|| {
                             handle_connection(s, routes); 
                         });
@@ -63,6 +62,7 @@ impl HTTPServer {
                         if active_threads == 0 && *terminate.lock().unwrap() {
                             let _ = sender.send(true);
                         }
+
                     }
                     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                         if *terminate.lock().unwrap() { break }
@@ -90,7 +90,7 @@ impl HTTPServer {
 
     pub fn close(&mut self) {
         *self.terminate.lock().unwrap() = true;
-        self.receiver.as_ref().unwrap().recv();
+        let _ = self.receiver.as_ref().unwrap().recv();
     }
     
 }

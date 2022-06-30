@@ -16,7 +16,7 @@ mod tests;
 mod threadpool;
 
 fn main() {
-    let mut server = HTTPServer::new("127.0.0.1", 8000, 4);
+    let mut server = HTTPServer::new("127.0.0.1", 8080, 4);
 
     // Set up all endpoints
     server.routes(vec![
