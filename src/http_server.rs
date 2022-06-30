@@ -1,4 +1,4 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, Write}, collections::HashMap, thread, time::Duration, sync::{mpsc::{Receiver, self, Sender}, Arc, Mutex}};
+use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::HashMap, thread, time::Duration, sync::{mpsc::{Receiver, self, Sender}, Arc, Mutex}};
 
 use serde_json::json;
 
@@ -41,23 +41,32 @@ impl HTTPServer {
         let (sender, receiver) = mpsc::channel();
 
         self.receiver = Some(receiver);
+
+        listener.set_nonblocking(true);
         
         thread::spawn(move || {
-            for stream in listener.incoming() {
-
-                if *terminate.lock().unwrap() { break }
-
-                let stream = stream.unwrap();
+            loop {
                 let routes = routes.clone();
-                
-                pool.execute(|| {
-                    handle_connection(stream, routes); 
-                });
+                let stream = listener.accept();
 
-                let active_threads = pool.get_num_active_threads();
-
-                if active_threads == 0 && *terminate.lock().unwrap() {
-                    let _ = sender.send(true);
+                match stream {
+                    Ok((s, addr)) => {
+                        // do something with the TcpStream
+                        pool.execute(|| {
+                            handle_connection(s, routes); 
+                        });
+        
+                        let active_threads = pool.get_num_active_threads();
+        
+                        if active_threads == 0 && *terminate.lock().unwrap() {
+                            let _ = sender.send(true);
+                        }
+                    }
+                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        if *terminate.lock().unwrap() { break }
+                        continue;
+                    }
+                    Err(e) => panic!("encountered IO error: {e}"),
                 }
             }
         });

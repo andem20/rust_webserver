@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use std::thread::{self, JoinHandle};
+    use std::error::Error;
 
     use serde::{Serialize, Deserialize};
     
@@ -48,9 +48,17 @@ mod tests {
     }
     
     #[test]
-    fn web_server_test() {
-        setup();
+    fn web_server_test() -> Result<(), Box<dyn Error>> {
+        let mut server = setup();
+
+        let addr = "localhost:8000";
+
+        let future = async {
+            reqwest::get(addr).await.unwrap();
+        };
     
-        loop {}
+        server.close();
+
+        Ok(())
     }
 }
