@@ -1,8 +1,8 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::HashMap, thread, time::Duration, sync::{mpsc::{Receiver, self, Sender}, Arc, Mutex}};
+use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::HashMap, thread, sync::{mpsc::{Receiver, self}, Arc, Mutex}};
 
 use serde_json::json;
 
-use crate::{route::Route, request::Request, response::{Response, self}, threadpool::ThreadPool};
+use crate::{route::Route, request::Request, response::{Response}, threadpool::ThreadPool};
 
 pub type Headers = HashMap<String, String>;
 

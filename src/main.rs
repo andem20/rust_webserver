@@ -1,19 +1,9 @@
 
-use std::{thread, time::Duration, sync::mpsc};
+use std::{thread, time::Duration};
 
-use request::Request;
-use response::Response;
-use route::Route;
 use serde::{Serialize, Deserialize};
+use webserver::{http_server::HTTPServer, route::Route, request::Request, response::Response};
 
-use crate::http_server::HTTPServer;
-
-mod http_server;
-mod route;
-mod response;
-mod request;
-mod tests;
-mod threadpool;
 
 fn main() {
     let mut server = HTTPServer::new("127.0.0.1", 8080, 4);
