@@ -1,15 +1,17 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 
 use crate::http_server::Headers;
 
 pub struct Request {
     headers: Headers,
+    params: HashMap<String, String>
 }
 
 impl Request {
     pub fn new(buffer: &[u8]) -> Request {
         let mut request = Request { 
-            headers: HashMap::new()
+            headers: HashMap::new(),
+            params: HashMap::new()
         };
 
         let headers = String::from_utf8_lossy(buffer);
@@ -28,5 +30,9 @@ impl Request {
 
     pub fn get_headers(&self) -> &Headers {
         &self.headers
+    }
+
+    pub fn get_param(&self, param: &str) ->Option<&String> {
+        self.params.get(param)
     }
 }
