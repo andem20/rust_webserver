@@ -2,7 +2,7 @@
 use std::{thread, time::Duration};
 
 use serde::{Serialize, Deserialize};
-use webserver::{tcp_server::TCPServer, route::Route, request::Request, response::Response};
+use webserver::tcp_server::{TCPServer, route::Route, request::Request, response::Response};
 
 
 fn main() {

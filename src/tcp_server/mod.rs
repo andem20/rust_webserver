@@ -2,7 +2,11 @@ use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::H
 
 use serde_json::json;
 
-use crate::{route::Route, request::Request, response::Response, threadpool::ThreadPool};
+pub mod route;
+pub mod request;
+pub mod response;
+
+use crate::{threadpool::ThreadPool, tcp_server::{request::Request, response::Response, route::Route}};
 
 pub type Headers = HashMap<String, String>;
 

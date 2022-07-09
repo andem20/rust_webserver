@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{request::Request, response::Response};
+use super::{request::Request, response::Response};
 
 type Handler = fn(req: &Request, res: &mut Response);
 

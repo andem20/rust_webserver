@@ -1,9 +1,9 @@
 use serde_json::json;
-use webserver::route::Route;
 
 mod util;
 
 use util::{test_data, handlers, setup_teardown};
+use webserver::tcp_server::route::Route;
 
 const URL: &'static str = "http://localhost";
 
