@@ -171,10 +171,8 @@ fn handle_connection(mut stream: TcpStream, routes: Arc<Route>) {
     let mut headers = String::new();
 
     for header in response.get_headers() {
-        headers.push_str(&header.0);
-        headers.push_str(": ");
-        headers.push_str(&header.1);
-        headers.push_str("\r\n");
+        let header = format!("{}: {}\r\n", header.0, header.1);
+        headers.push_str(&header);
     }
 
     let response = format!(
