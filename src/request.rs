@@ -1,6 +1,6 @@
 use std::{collections::HashMap, error::Error};
 
-use crate::http_server::Headers;
+use crate::tcp_server::Headers;
 
 pub struct Request {
     headers: Headers,
@@ -18,10 +18,10 @@ impl Request {
         let headers = headers.split("\r\n");
 
         for header in headers.into_iter() {
-            let h = header.split_once(": ");
+            let h = header.split_once(":");
             if h.is_some() {
                 let (key, value) = h.unwrap();
-                request.headers.insert(key.to_owned(), value.to_owned());
+                request.headers.insert(key.to_owned(), value.trim().to_owned());
             }
         }
 
@@ -34,5 +34,9 @@ impl Request {
 
     pub fn get_param(&self, param: &str) ->Option<&String> {
         self.params.get(param)
+    }
+
+    pub fn set_param(&mut self, param: &str, value: &str) {
+        self.params.insert(param.to_owned(), value.to_owned());
     }
 }

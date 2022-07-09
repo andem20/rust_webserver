@@ -1,40 +1,40 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::HashMap, thread, sync::{mpsc::{Receiver, self}, Arc, Mutex}};
+use std::{net::{TcpListener, TcpStream}, io::{Read, Write, self}, collections::HashMap, thread, sync::{mpsc::{Receiver, self}, Arc, Mutex}, borrow::{BorrowMut, Borrow}, time::Duration, cell::RefCell, fmt::format};
 
 use serde_json::json;
 
-use crate::{route::Route, request::Request, response::{Response}, threadpool::ThreadPool};
+use crate::{route::{Route, self}, request::Request, response::{Response}, threadpool::ThreadPool};
 
 pub type Headers = HashMap<String, String>;
 
 
-pub struct HTTPServer {
+pub struct TCPServer {
     host: String,
     port: u16,
-    routes: HashMap<String, Route>,
+    root_route: Route,
     terminate: Arc<Mutex<bool>>,
     receiver: Option<Receiver<bool>>,
     pool_size: u16,
 }
 
-impl HTTPServer {
-    pub fn new(host: &str, port: u16, pool_size: u16) -> HTTPServer {
-        HTTPServer {
+impl TCPServer {
+    pub fn new(host: &str, port: u16, pool_size: u16) -> TCPServer {
+        TCPServer {
             host: host.to_string(),
             port,
-            routes: HashMap::new(),
+            root_route: Route::new("", None, None),
             terminate: Arc::new(Mutex::new(false)),
             receiver: None,
             pool_size
         }
     }
     
-    pub fn listen(&mut self, callback: fn(this: &HTTPServer)) {
+    pub fn listen(&mut self, callback: fn(this: &TCPServer)) {
         let addr = format!("{}:{}", self.host, self.port);
         callback(&self);
 
-        let routes = Arc::new(self.routes.clone());
+        let root_route = Arc::new(self.root_route.clone());
 
-        let pool = ThreadPool::new(self.pool_size); // should be 2x num of cpu cores
+        let pool = ThreadPool::new(self.pool_size);
 
         let listener = TcpListener::bind(addr).unwrap();
 
@@ -48,13 +48,13 @@ impl HTTPServer {
         
         thread::spawn(move || {
             loop {
-                let routes = routes.clone();
+                let root_route = root_route.clone();
                 let stream = listener.accept();
 
                 match stream {
                     Ok((s, _addr)) => {
                         pool.execute(|| {
-                            handle_connection(s, routes); 
+                            handle_connection(s, root_route); 
                         });
         
                         let active_threads = pool.get_num_active_threads();
@@ -66,7 +66,6 @@ impl HTTPServer {
                     }
                     Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                         if *terminate.lock().unwrap() { break }
-                        continue;
                     }
                     Err(e) => panic!("encountered IO error: {e}"),
                 }
@@ -84,7 +83,26 @@ impl HTTPServer {
 
     pub fn routes(&mut self, routes: Vec<Route>) {
         for route in routes {
-            self.routes.insert(route.get_endpoint().clone(), route);
+            let path = route.get_endpoint().split("/");
+            let mut current_route = &mut self.root_route;
+            
+            for branch in path {
+                let mut key = format!("/{}", branch);
+                let endpoint = key.clone();
+
+                if branch.contains(":") {
+                    key = "/:".to_owned();
+                }
+                
+                if !current_route.get_routes().contains_key(&key) {
+                    current_route.add_route(&key, Route::new(&endpoint, None, None));
+                }
+
+                current_route = current_route.get_route(&key).unwrap();
+            }
+
+            current_route.set_handler(route.get_handler().unwrap());
+            current_route.set_method(route.get_method().as_ref().unwrap().to_owned());
         }
     }
 
@@ -95,28 +113,55 @@ impl HTTPServer {
     
 }
 
-fn handle_connection(mut stream: TcpStream, routes: Arc<HashMap<String, Route>>) {
+fn handle_connection(mut stream: TcpStream, routes: Arc<Route>) {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();
 
     let headers = String::from_utf8_lossy(&buffer);
 
-    let request = Request::new(&buffer);
+    let mut request = Request::new(&buffer);
     let mut response = Response::new(HashMap::new());
     
     let endpoint = headers.split(" ").nth(1).unwrap();
 
-    let route = routes.get(endpoint);
+    let url = endpoint.split("/");
+
+    let mut route = routes.clone();
+    let mut valid = true;
+
+    for branch in url {
+        let key = format!("/{}", branch);
+        if route.get_routes().contains_key(&key) {
+            route = Arc::new(route.get_routes().get(&key).unwrap().clone());
+            continue;
+        }
+
+        if route.get_routes().contains_key("/:") {
+            // TODO maybe should check type as well?
+
+            // Remove leading slash
+            let param = &route.get_routes().get("/:").unwrap().get_endpoint()[2..];
+            println!("param: {}", param);
+            request.set_param(param, branch);
+            route = Arc::new(route.get_routes().get("/:").unwrap().clone());
+            continue;
+        }
+        
+        valid = false;
+        break;
+    }
+
+    // let route = routes.get_endpoint();
     
-    let (status, content) = if route.is_none() {
+    let (status, content) = if !valid {
         let value = serde_json::to_string_pretty(&json!({
             "error": "Page not found"
         })).unwrap();
 
         (404, value)
     } else {
-        let handler = route.unwrap().get_handler();
+        let handler = route.get_handler().unwrap();
         handler(&request, response.as_mut());
         let value = response.get_content();
 
@@ -124,6 +169,7 @@ fn handle_connection(mut stream: TcpStream, routes: Arc<HashMap<String, Route>>)
     };
 
     let mut headers = String::new();
+
     for header in response.get_headers() {
         headers.push_str(&header.0);
         headers.push_str(": ");

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use webserver::{request::Request, response::Response};
 
 use crate::util::test_data;

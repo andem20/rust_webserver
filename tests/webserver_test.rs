@@ -1,4 +1,4 @@
-use rand::Rng;
+use serde_json::json;
 use webserver::route::Route;
 
 mod util;
@@ -15,9 +15,7 @@ fn web_server_test() {
         Route::get("/", handlers::index_handler),
     ];
     
-    let mut rng = rand::thread_rng();
-
-    let port = rng.gen_range(10000..20000);
+    let port = 10000;
 
     let mut server = setup_teardown::setup(routes, port);
 
@@ -39,20 +37,20 @@ fn params_test() {
         Route::get("/users/:id", handlers::users_handler),
     ];
 
-    let mut rng = rand::thread_rng();
-
-    let port = rng.gen_range(10000..20000);
+    let port = 10001;
 
     let mut server = setup_teardown::setup(routes, port);
 
     let expected = "12";
 
-    let url = format!("{}:{}", URL, port);
+    let url = format!("{}:{}/users/{}", URL, port, expected);
 
     let request = reqwest::blocking::get(url);
     let body = request.unwrap().text().unwrap();
     
     let actual = body.as_str();
+
+    let expected = json!(expected).to_string();
 
     assert!(actual == expected);
 

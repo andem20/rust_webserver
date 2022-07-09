@@ -2,16 +2,21 @@
 use std::{thread, time::Duration};
 
 use serde::{Serialize, Deserialize};
-use webserver::{http_server::HTTPServer, route::Route, request::Request, response::Response};
+use webserver::{tcp_server::TCPServer, route::Route, request::Request, response::Response};
 
 
 fn main() {
-    let mut server = HTTPServer::new("127.0.0.1", 8080, 4);
+    let mut server = TCPServer::new("127.0.0.1", 8080, 4);
 
     // Set up all endpoints
     server.routes(vec![
-        Route::get("/", index_handler),
+        // Route::get("/:id", index_handler),
+        Route::get("/index/hej", index_handler),
+        Route::get("/index/:id", index_handler),
+        Route::get("/index/:id/newpath", index_handler),
+        Route::get("/index/subroute/newpath", index_handler),
         Route::get("/slow", slow_handler),
+        Route::get("/index", index_handler),
     ]);
 
     server.listen(|this| {
@@ -21,9 +26,7 @@ fn main() {
         );
     });
 
-    loop {
-        
-    }
+    thread::sleep(Duration::from_millis(100000));
 }
 
 #[derive(Serialize, Deserialize,)]
