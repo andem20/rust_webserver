@@ -1,7 +1,11 @@
 use std::{
     sync::{mpsc, Arc, Mutex},
-    thread,
 };
+
+use self::{message::Message, worker::Worker};
+
+mod message;
+mod worker;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
@@ -57,54 +61,12 @@ impl Drop for ThreadPool {
         println!("Shutting down all workers.");
 
         for worker in &mut self.workers {
-            println!("Shutting down worker {}", worker.id);
+            println!("Shutting down worker {}", worker.get_id());
 
             if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();
-                worker.is_finished = true;
+                worker.set_is_finished(true);
             }
         }
     }
-}
-
-struct Worker {
-    id: u16,
-    thread: Option<thread::JoinHandle<()>>,
-    is_finished: bool
-}
-
-impl Worker {
-    pub fn new(id: u16, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
-        let thread = thread::spawn(move || loop {
-            let message = receiver.lock().expect("Thread Panicked").recv().unwrap();
-
-            match message {
-                Message::NewJob(job) => {
-                    println!("Worker {} got a job; executing.", id);
-
-                    job();
-                }
-                Message::Terminate => {
-                    println!("Worker {} was told to terminate.", id);
-
-                    break;
-                }
-            }
-        });
-
-        Worker {
-            id,
-            thread: Some(thread),
-            is_finished: false
-        }
-    }
-
-    fn is_finished(&self) -> bool {
-        self.is_finished
-    }
-}
-
-enum Message {
-    NewJob(Job),
-    Terminate,
 }

@@ -3,7 +3,7 @@ use std::fs;
 use serde::Serialize;
 use serde_json::json;
 
-use crate::tcp_server::Headers;
+use super::headers_type::Headers;
 
 pub struct Response {
     headers: Headers,

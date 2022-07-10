@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 
-use crate::tcp_server::Headers;
+use super::headers_type::Headers;
 
 pub struct Request {
     headers: Headers,
