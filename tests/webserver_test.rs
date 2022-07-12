@@ -1,3 +1,4 @@
+use reqwest::Method;
 use serde_json::json;
 
 mod util;
@@ -8,11 +9,11 @@ use webserver::tcp_server::route::Route;
 const URL: &'static str = "http://localhost";
 
 #[test]
-fn web_server_test() {
+fn get_request_test() {
     let expected = test_data::get_data();
 
     let routes = vec![
-        Route::get("/", handlers::index_handler),
+        Route::get("/", handlers::get_handler),
     ];
     
     let port = 10000;
@@ -54,5 +55,29 @@ fn params_test() {
 
     assert!(actual == expected);
 
+    server.close();
+}
+
+#[test]
+fn post_request_test() {
+    let data = test_data::get_data();
+
+    let routes = vec![
+        Route::post("/", handlers::get_handler),
+    ];
+    
+    let port = 10002;
+
+    let mut server = setup_teardown::setup(routes, port);
+
+    let url = format!("{}:{}", URL, port);
+
+    let client = reqwest::blocking::Client::new();
+    let json_data = serde_json::to_string(&data).unwrap();
+    let request = client.request(Method::POST, url).body(json_data);
+    let response = request.send().unwrap();
+    
+    assert!(response.status().is_success());
+    
     server.close();
 }
