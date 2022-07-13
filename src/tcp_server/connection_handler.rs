@@ -23,7 +23,6 @@ pub fn connection_handler(mut stream: TcpStream, routes: Arc<HashMap<Method, Rou
 
     let mut route = routes.get(&method).unwrap().clone();
     let mut valid = true;
-    println!("{}", &route.get_endpoint());
     
     for branch in url {
         let key = format!("/{}", branch);
