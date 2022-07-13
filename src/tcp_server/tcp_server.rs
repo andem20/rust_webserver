@@ -7,7 +7,7 @@ use super::{connection_handler::connection_handler, method::Method};
 pub struct TCPServer {
     host: String,
     port: u16,
-    root_route: HashMap<Method, Route>,
+    routes_map: HashMap<Method, Route>,
     terminate: Arc<Mutex<bool>>,
     receiver: Option<Receiver<bool>>,
     pool_size: u16,
@@ -23,7 +23,7 @@ impl TCPServer {
         TCPServer {
             host: host.to_string(),
             port,
-            root_route: map,
+            routes_map: map,
             terminate: Arc::new(Mutex::new(false)),
             receiver: None,
             pool_size
@@ -34,7 +34,7 @@ impl TCPServer {
         let addr = format!("{}:{}", self.host, self.port);
         callback(&self);
 
-        let root_route = Arc::new(self.root_route.clone());
+        let root_route = Arc::new(self.routes_map.clone());
 
         let pool = ThreadPool::new(self.pool_size);
 
@@ -87,7 +87,7 @@ impl TCPServer {
         for route in routes {
             let path = route.get_endpoint().split("/");
             let method = route.get_method().as_ref().unwrap();
-            let mut current_route = self.root_route.get_mut(method).unwrap();
+            let mut current_route = self.routes_map.get_mut(method).unwrap();
             
             for branch in path {
                 let mut key = format!("/{}", branch);

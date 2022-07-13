@@ -6,7 +6,7 @@ use crate::tcp_server::{request::Request, response::Response, method::Method};
 
 use super::route::Route;
 
-pub fn connection_handler(mut stream: TcpStream, routes: Arc<HashMap<Method, Route>>) {
+pub fn connection_handler(mut stream: TcpStream, routes_map: Arc<HashMap<Method, Route>>) {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();
@@ -21,7 +21,7 @@ pub fn connection_handler(mut stream: TcpStream, routes: Arc<HashMap<Method, Rou
     let url = endpoint.split("/");
     let method = Method::from_string(headers.split(" ").next().unwrap());
 
-    let mut route = routes.get(&method).unwrap().clone();
+    let mut route = routes_map.get(&method).unwrap().clone();
     let mut valid = true;
     
     for branch in url {
