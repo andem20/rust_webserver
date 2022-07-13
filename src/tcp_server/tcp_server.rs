@@ -17,8 +17,8 @@ impl TCPServer {
     pub fn new(host: &str, port: u16, pool_size: u16) -> TCPServer {
         let mut map = HashMap::new();
 
-        map.insert(Method::GET, Route::new("get", None, None));
-        map.insert(Method::POST, Route::new("post", None, None));
+        map.insert(Method::GET, Route::new("", None, None));
+        map.insert(Method::POST, Route::new("", None, None));
 
         TCPServer {
             host: host.to_string(),
