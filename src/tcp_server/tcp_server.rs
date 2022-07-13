@@ -1,13 +1,13 @@
-use std::{sync::{Mutex, Arc, mpsc::{Receiver, self}}, net::TcpListener, thread, io};
+use std::{sync::{Mutex, Arc, mpsc::{Receiver, self}}, net::TcpListener, thread, io, collections::HashMap};
 
 use crate::{threadpool::ThreadPool, tcp_server::route::Route};
 
-use super::connection_handler::connection_handler;
+use super::{connection_handler::connection_handler, method::Method};
 
 pub struct TCPServer {
     host: String,
     port: u16,
-    root_route: Route,
+    root_route: HashMap<Method, Route>,
     terminate: Arc<Mutex<bool>>,
     receiver: Option<Receiver<bool>>,
     pool_size: u16,
@@ -15,10 +15,15 @@ pub struct TCPServer {
 
 impl TCPServer {
     pub fn new(host: &str, port: u16, pool_size: u16) -> TCPServer {
+        let mut map = HashMap::new();
+
+        map.insert(Method::GET, Route::new("get", None, None));
+        map.insert(Method::POST, Route::new("post", None, None));
+
         TCPServer {
             host: host.to_string(),
             port,
-            root_route: Route::new("", None, None),
+            root_route: map,
             terminate: Arc::new(Mutex::new(false)),
             receiver: None,
             pool_size
@@ -81,7 +86,8 @@ impl TCPServer {
     pub fn routes(&mut self, routes: Vec<Route>) {
         for route in routes {
             let path = route.get_endpoint().split("/");
-            let mut current_route = &mut self.root_route;
+            let method = route.get_method().as_ref().unwrap();
+            let mut current_route = self.root_route.get_mut(method).unwrap();
             
             for branch in path {
                 let mut key = format!("/{}", branch);

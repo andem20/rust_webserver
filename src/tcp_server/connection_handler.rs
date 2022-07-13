@@ -2,11 +2,11 @@ use std::{net::TcpStream, io::{Read, Write}, collections::HashMap, sync::Arc};
 
 use serde_json::json;
 
-use crate::tcp_server::{request::Request, response::Response};
+use crate::tcp_server::{request::Request, response::Response, method::Method};
 
 use super::route::Route;
 
-pub fn connection_handler(mut stream: TcpStream, routes: Arc<Route>) {
+pub fn connection_handler(mut stream: TcpStream, routes: Arc<HashMap<Method, Route>>) {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();
@@ -19,14 +19,16 @@ pub fn connection_handler(mut stream: TcpStream, routes: Arc<Route>) {
     let endpoint = headers.split(" ").nth(1).unwrap();
 
     let url = endpoint.split("/");
+    let method = Method::from_string(headers.split(" ").next().unwrap());
 
-    let mut route = routes.clone();
+    let mut route = routes.get(&method).unwrap().clone();
     let mut valid = true;
-
+    println!("{}", &route.get_endpoint());
+    
     for branch in url {
         let key = format!("/{}", branch);
         if route.get_routes().contains_key(&key) {
-            route = Arc::new(route.get_routes().get(&key).unwrap().clone());
+            route = route.get_routes().get(&key).unwrap().clone();
             continue;
         }
 
@@ -35,12 +37,21 @@ pub fn connection_handler(mut stream: TcpStream, routes: Arc<Route>) {
             let param = &route.get_routes().get("/:").unwrap().get_endpoint()[2..];
             println!("param: {}", param);
             request.set_param(param, branch);
-            route = Arc::new(route.get_routes().get("/:").unwrap().clone());
+            route = route.get_routes().get("/:").unwrap().clone();
             continue;
         }
         
         valid = false;
         break;
+    }
+
+
+    match method {
+        Method::POST => {
+            // Add body from request to request struct
+
+        },
+        _ => {}
     }
 
     let (status, content) = if !valid {

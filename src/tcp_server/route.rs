@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{request::Request, response::Response};
+use super::{request::Request, response::Response, method::Method};
 
 type Handler = fn(req: &Request, res: &mut Response);
 
@@ -24,6 +24,10 @@ impl Route {
 
     pub fn get(endpoint: &str, handler: Handler) -> Route {
         Route::new(endpoint, Some(handler), Some(Method::GET))
+    }
+
+    pub fn post(endpoint: &str, handler: Handler) -> Route {
+        Route::new(endpoint, Some(handler), Some(Method::POST))
     }
 
     pub fn get_endpoint(&self) -> &String {
@@ -61,10 +65,4 @@ impl Route {
     pub fn set_method(&mut self, method: Method) {
         self.method = Some(method);
     }
-}
-
-#[derive(Clone)]
-pub enum Method {
-    GET,
-    POST,
 }
