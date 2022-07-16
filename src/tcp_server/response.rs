@@ -1,7 +1,6 @@
 use std::fs;
 
 use serde::Serialize;
-use serde_json::json;
 
 use super::headers_type::Headers;
 
@@ -19,9 +18,10 @@ impl Response {
     }
 
     pub fn json(&mut self, content: impl Serialize) {
-        let json = json!(content);
-        self.content = Some(serde_json::to_string_pretty(&json).unwrap());
-        self.headers.insert("Content-Type".to_owned(), "application/json".to_owned());
+        let json = serde_json::to_string(&content).unwrap();
+        println!("{}", json);
+        self.content = Some(json);
+        self.headers.insert("content-type".to_owned(), "application/json".to_owned());
         
     }
 
@@ -47,6 +47,6 @@ impl Response {
     }
 
     pub fn set_header(&mut self, header: &str, value: &str) {
-        self.headers.insert(header.to_owned(), value.to_owned());
+        self.headers.insert(header.to_ascii_lowercase(), value.to_owned());
     }
 }

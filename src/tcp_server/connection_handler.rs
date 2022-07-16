@@ -19,9 +19,9 @@ pub fn connection_handler(mut stream: TcpStream, routes_map: Arc<HashMap<Method,
     let endpoint = headers.split(" ").nth(1).unwrap();
 
     let url = endpoint.split("/");
-    let method = Method::from_string(headers.split(" ").next().unwrap());
+    let method = request.get_method();
 
-    let mut route = routes_map.get(&method).unwrap().clone();
+    let mut route = routes_map.get(method).unwrap().clone();
     let mut valid = true;
     
     for branch in url {
@@ -44,17 +44,8 @@ pub fn connection_handler(mut stream: TcpStream, routes_map: Arc<HashMap<Method,
         break;
     }
 
-
-    match method {
-        Method::POST => {
-            // Add body from request to request struct
-
-        },
-        _ => {}
-    }
-
     let (status, content) = if !valid {
-        let value = serde_json::to_string_pretty(&json!({
+        let value = serde_json::to_string(&json!({
             "error": "Page not found"
         })).unwrap();
 
@@ -82,7 +73,7 @@ pub fn connection_handler(mut stream: TcpStream, routes_map: Arc<HashMap<Method,
         &content
     );
 
-    println!("{}", &response);
+    // println!("{}", &response);
 
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();

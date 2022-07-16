@@ -17,6 +17,7 @@ fn main() {
         Route::get("/index/subroute/newpath", index_handler),
         Route::get("/slow", slow_handler),
         Route::get("/index", index_handler),
+        Route::post("/index", index_handler),
     ]);
 
     server.listen(|this| {

@@ -9,6 +9,12 @@ pub fn get_handler(req: &Request, res: &mut Response) {
     res.json(data);
 }
 
+pub fn post_handler(req: &Request, res: &mut Response) {
+    let data = req.get_body().as_ref().unwrap();
+
+    res.json(data);
+}
+
 pub fn users_handler(req: &Request, res: &mut Response) {
     let id = req.get_param("id");
 

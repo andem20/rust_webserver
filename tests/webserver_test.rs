@@ -6,6 +6,8 @@ mod util;
 use util::{test_data, handlers, setup_teardown};
 use webserver::tcp_server::route::Route;
 
+use crate::util::test_data::TestDTO;
+
 const URL: &'static str = "http://localhost";
 
 #[test]
@@ -25,7 +27,7 @@ fn get_request_test() {
     let request = reqwest::blocking::get(url);
     let body = request.unwrap().text().unwrap();
     
-    let actual = serde_json::from_str::<test_data::TestDTO>(body.as_str()).unwrap();
+    let actual: TestDTO = serde_json::from_str(&body).unwrap();
     
     assert!(actual == expected);
 
@@ -60,10 +62,10 @@ fn params_test() {
 
 #[test]
 fn post_request_test() {
-    let data = test_data::get_data();
+    let expected = test_data::get_data();
 
     let routes = vec![
-        Route::post("/", handlers::get_handler),
+        Route::post("/", handlers::post_handler),
     ];
     
     let port = 10002;
@@ -73,11 +75,19 @@ fn post_request_test() {
     let url = format!("{}:{}", URL, port);
 
     let client = reqwest::blocking::Client::new();
-    let json_data = serde_json::to_string(&data).unwrap();
-    let request = client.request(Method::POST, url).body(json_data);
+    let json_data = serde_json::to_string(&expected).unwrap();
+    let request = client.post(url)
+                        .header(reqwest::header::CONTENT_TYPE, "application/json")
+                        .body(json_data);
     let response = request.send().unwrap();
-    
+
     assert!(response.status().is_success());
+
+    let body = response.text().unwrap();
+
+    let actual: TestDTO = serde_json::from_str(&body).unwrap();
+    
+    assert!(actual == expected);
     
     server.close();
 }
